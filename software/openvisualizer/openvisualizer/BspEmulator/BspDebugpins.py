@@ -34,6 +34,8 @@ class BspDebugpins(BspModule.BspModule):
         self.syncAckPinHigh       = False
         self.debugPinHigh         = False
         self.vcdLogger            = VcdLogger.VcdLogger()
+
+        self.vcdLogger.addMoteDefinitions()
         
         # initialize the parent
         BspModule.BspModule.__init__(self,'BspDebugpins')

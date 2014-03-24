@@ -1,3 +1,4 @@
+import os
 import threading
 
 class VcdLogger(object):
@@ -26,35 +27,55 @@ class VcdLogger(object):
         self._init = True
         
         # local variables
-        self.f          = open('debugpins.vcd','w')
+        self.f          = open('debugpins_0.vcd','w')
         self.signame    = {}
         self.lastTs     = {}
         self.dataLock   = threading.Lock()
         self.enabled    = False
-        sigChar         = ord('!')
+        self.sigChar    = ord('!')
+        self.moteIndex  = 0
         
         # create header
         header  = []
         header += ['$timescale 1ns $end\n']
         header += ['$scope module logic $end\n']
-        for mote in [1,2]: # poipoi
-            for signal in self.SIGNAMES:
-                self.signame[(mote,signal)] = chr(sigChar)
-                header += [
-                    '$var wire 1 {0} {1}_{2} $end\n'.format(
-                        chr(sigChar),
-                        mote,
-                        signal,
-                    )
-                ]
-                sigChar += 1
         header += ['$upscope $end\n']
         header += ['$enddefinitions $end\n']
         header  = ''.join(header)
         
         # write header
-        self.f.write(header)
-    
+        self.f.write(header) 
+
+    def addMoteDefinitions(self):
+        
+        # close previous file first        
+        self.f.close()
+        previousFile  = open('debugpins_'+str(self.moteIndex)+'.vcd','r')
+        self.f        = open('debugpins_'+str(self.moteIndex + 1)+'.vcd','w') # use this file to insert mote definitions
+
+        string  = previousFile.readline()
+        while (string != ''):
+            if string == '$upscope $end\n':
+                for signal in self.SIGNAMES:
+                    self.signame[(self.moteIndex + 1,signal)] = chr(self.sigChar)
+                    self.f.write(
+                        '$var wire 1 {0} {1}_{2} $end\n'.format(
+                            chr(self.sigChar),
+                            self.moteIndex + 1,
+                            signal,
+                        )
+                    )
+                    self.sigChar += 1
+            self.f.write(string)
+            string = previousFile.readline()
+        # write the end
+        previousFile.close()
+
+        os.remove('debugpins_'+str(self.moteIndex)+'.vcd')
+
+        # increase mote index
+        self.moteIndex  += 1
+            
     def setEnabled(self,enabled):
         assert enabled in [True,False]
         
